@@ -1,0 +1,337 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User workspace profile, settings, and Whisper.cpp preferences isolated by Firebase UID.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the owner."
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 254
+        },
+        "plan": {
+          "type": "string",
+          "enum": ["Free", "Pro", "Team"]
+        },
+        "settings": {
+          "type": "object",
+          "description": "Nested general, voice, AI, and privacy preferences map."
+        },
+        "whisperConfig": {
+          "type": "object",
+          "description": "Phase 2 Whisper.cpp configuration map."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "displayName", "email", "plan", "settings", "createdAt", "updatedAt"]
+    },
+    "VoiceHistoryEntry": {
+      "title": "VoiceHistoryEntry",
+      "description": "A user's captured voice dictation session.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "transcript": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50000
+        },
+        "durationSec": {
+          "type": "number"
+        },
+        "wordCount": {
+          "type": "number"
+        },
+        "languageId": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 32
+        },
+        "languageName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "engineUsed": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "modeUsed": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "uid",
+        "title",
+        "transcript",
+        "durationSec",
+        "wordCount",
+        "languageId",
+        "languageName",
+        "engineUsed",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ChatConversation": {
+      "title": "ChatConversation",
+      "description": "A multi-turn AI Assistant conversation owned by a user.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "mode": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "messages": {
+          "type": "array"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "uid", "title", "mode", "messages", "createdAt", "updatedAt"]
+    },
+    "CustomMode": {
+      "title": "CustomMode",
+      "description": "User-defined or customized AI writing/voice mode.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "instructions": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "tone": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "language": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "isPredefined": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "uid", "name", "description", "instructions", "tone", "language", "createdAt", "updatedAt"]
+    },
+    "VocabularyItem": {
+      "title": "VocabularyItem",
+      "description": "User-specific custom vocabulary term and spoken alias.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "term": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "spokenAlias": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "Names",
+            "Company Names",
+            "Technical Terminology",
+            "Project Names",
+            "Frequently Used Phrases"
+          ]
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "uid", "term", "spokenAlias", "category", "createdAt", "updatedAt"]
+    },
+    "ActivityEvent": {
+      "title": "ActivityEvent",
+      "description": "User dictation or AI usage event for real analytics computation.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "date": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10
+        },
+        "type": {
+          "type": "string",
+          "enum": ["dictation", "ai_request"]
+        },
+        "words": {
+          "type": "number"
+        },
+        "durationSec": {
+          "type": "number"
+        },
+        "languageName": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "aiMode": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "uid", "date", "type", "words", "durationSec", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Stores authenticated user profile, settings, and Whisper preferences."
+    },
+    "/users/{uid}/history/{entryId}": {
+      "schema": { "$ref": "#/entities/VoiceHistoryEntry" },
+      "description": "Stores user-isolated voice dictation history."
+    },
+    "/users/{uid}/conversations/{chatId}": {
+      "schema": { "$ref": "#/entities/ChatConversation" },
+      "description": "Stores user-isolated AI Assistant chat conversations."
+    },
+    "/users/{uid}/modes/{modeId}": {
+      "schema": { "$ref": "#/entities/CustomMode" },
+      "description": "Stores user-isolated custom writing modes."
+    },
+    "/users/{uid}/vocabulary/{vocabId}": {
+      "schema": { "$ref": "#/entities/VocabularyItem" },
+      "description": "Stores user-isolated custom vocabulary entries."
+    },
+    "/users/{uid}/activity/{activityId}": {
+      "schema": { "$ref": "#/entities/ActivityEvent" },
+      "description": "Stores user-isolated usage analytics events."
+    }
+  }
+}

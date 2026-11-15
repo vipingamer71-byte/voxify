@@ -1,0 +1,235 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened Global Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(uid) {
+      return isVerified() && request.auth.uid == uid;
+    }
+
+    // Entity Validation Blueprints
+    function isValidUserProfile(data, uid) {
+      return data.keys().hasAll(['uid', 'displayName', 'email', 'plan', 'settings', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'email', 'plan', 'settings', 'whisperConfig', 'createdAt', 'updatedAt'])
+        && data.uid is string && data.uid == uid && data.uid == request.auth.uid
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 254
+        && data.plan in ['Free', 'Pro', 'Team']
+        && data.settings is map
+        && (!('whisperConfig' in data) || data.whisperConfig is map)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidHistoryEntry(data, uid, entryId) {
+      return data.keys().hasAll(['id', 'uid', 'title', 'transcript', 'durationSec', 'wordCount', 'languageId', 'languageName', 'engineUsed', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'uid', 'title', 'transcript', 'durationSec', 'wordCount', 'languageId', 'languageName', 'engineUsed', 'modeUsed', 'createdAt', 'updatedAt'])
+        && data.id is string && data.id == entryId
+        && data.uid is string && data.uid == uid && data.uid == request.auth.uid
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.transcript is string && data.transcript.size() >= 1 && data.transcript.size() <= 50000
+        && data.durationSec is number && data.durationSec >= 0 && data.durationSec <= 86400
+        && data.wordCount is number && data.wordCount >= 0 && data.wordCount <= 50000
+        && data.languageId is string && data.languageId.size() >= 2 && data.languageId.size() <= 32
+        && data.languageName is string && data.languageName.size() >= 1 && data.languageName.size() <= 80
+        && data.engineUsed is string && data.engineUsed.size() >= 1 && data.engineUsed.size() <= 80
+        && (!('modeUsed' in data) || (data.modeUsed is string && data.modeUsed.size() <= 80))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidConversation(data, uid, chatId) {
+      return data.keys().hasAll(['id', 'uid', 'title', 'mode', 'messages', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'uid', 'title', 'mode', 'messages', 'createdAt', 'updatedAt'])
+        && data.id is string && data.id == chatId
+        && data.uid is string && data.uid == uid && data.uid == request.auth.uid
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.mode is string && data.mode.size() >= 1 && data.mode.size() <= 80
+        && data.messages is list && data.messages.size() <= 200
+        && (data.messages.size() == 0 || data.messages[0] is map)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCustomMode(data, uid, modeId) {
+      return data.keys().hasAll(['id', 'uid', 'name', 'description', 'instructions', 'tone', 'language', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'uid', 'name', 'description', 'instructions', 'tone', 'language', 'isPredefined', 'createdAt', 'updatedAt'])
+        && data.id is string && data.id == modeId
+        && data.uid is string && data.uid == uid && data.uid == request.auth.uid
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && data.description is string && data.description.size() <= 400
+        && data.instructions is string && data.instructions.size() >= 1 && data.instructions.size() <= 4000
+        && data.tone is string && data.tone.size() <= 100
+        && data.language is string && data.language.size() <= 80
+        && (!('isPredefined' in data) || data.isPredefined is bool)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidVocabularyItem(data, uid, vocabId) {
+      return data.keys().hasAll(['id', 'uid', 'term', 'spokenAlias', 'category', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'uid', 'term', 'spokenAlias', 'category', 'notes', 'createdAt', 'updatedAt'])
+        && data.id is string && data.id == vocabId
+        && data.uid is string && data.uid == uid && data.uid == request.auth.uid
+        && data.term is string && data.term.size() >= 1 && data.term.size() <= 160
+        && data.spokenAlias is string && data.spokenAlias.size() <= 160
+        && data.category in ['Names', 'Company Names', 'Technical Terminology', 'Project Names', 'Frequently Used Phrases']
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 300))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidActivityEvent(data, uid, activityId) {
+      return data.keys().hasAll(['id', 'uid', 'date', 'type', 'words', 'durationSec', 'createdAt'])
+        && data.keys().hasOnly(['id', 'uid', 'date', 'type', 'words', 'durationSec', 'languageName', 'aiMode', 'createdAt'])
+        && data.id is string && data.id == activityId
+        && data.uid is string && data.uid == uid && data.uid == request.auth.uid
+        && data.date is string && data.date.size() == 10
+        && data.type in ['dictation', 'ai_request']
+        && data.words is number && data.words >= 0 && data.words <= 100000
+        && data.durationSec is number && data.durationSec >= 0 && data.durationSec <= 86400
+        && (!('languageName' in data) || (data.languageName is string && data.languageName.size() <= 80))
+        && (!('aiMode' in data) || (data.aiMode is string && data.aiMode.size() <= 80))
+        && data.createdAt is timestamp;
+    }
+
+    // User Profile Document (PII strictly restricted to owner; plan & email immutable on client update)
+    match /users/{uid} {
+      allow get: if isValidId(uid) && isOwner(uid);
+      allow list: if false;
+      allow create: if isValidId(uid)
+        && isOwner(uid)
+        && isValidUserProfile(incoming(), uid)
+        && incoming().plan == 'Free'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(uid)
+        && isOwner(uid)
+        && isValidUserProfile(incoming(), uid)
+        && incoming().uid == existing().uid
+        && incoming().email == existing().email
+        && incoming().plan == existing().plan
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'settings', 'whisperConfig', 'updatedAt']);
+      allow delete: if isValidId(uid) && isOwner(uid);
+
+      // Voice Dictation History Subcollection
+      match /history/{entryId} {
+        allow get: if isValidId(uid) && isValidId(entryId) && isOwner(uid);
+        allow list: if isValidId(uid) && isOwner(uid) && resource.data.uid == request.auth.uid;
+        allow create: if isValidId(uid) && isValidId(entryId)
+          && isOwner(uid)
+          && isValidHistoryEntry(incoming(), uid, entryId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isValidId(uid) && isValidId(entryId)
+          && isOwner(uid)
+          && isValidHistoryEntry(incoming(), uid, entryId)
+          && incoming().id == existing().id
+          && incoming().uid == existing().uid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'transcript', 'wordCount', 'modeUsed', 'updatedAt']);
+        allow delete: if isValidId(uid) && isValidId(entryId) && isOwner(uid);
+      }
+
+      // AI Conversations Subcollection
+      match /conversations/{chatId} {
+        allow get: if isValidId(uid) && isValidId(chatId) && isOwner(uid);
+        allow list: if isValidId(uid) && isOwner(uid) && resource.data.uid == request.auth.uid;
+        allow create: if isValidId(uid) && isValidId(chatId)
+          && isOwner(uid)
+          && isValidConversation(incoming(), uid, chatId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isValidId(uid) && isValidId(chatId)
+          && isOwner(uid)
+          && isValidConversation(incoming(), uid, chatId)
+          && incoming().id == existing().id
+          && incoming().uid == existing().uid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'mode', 'messages', 'updatedAt']);
+        allow delete: if isValidId(uid) && isValidId(chatId) && isOwner(uid);
+      }
+
+      // Custom Modes Subcollection
+      match /modes/{modeId} {
+        allow get: if isValidId(uid) && isValidId(modeId) && isOwner(uid);
+        allow list: if isValidId(uid) && isOwner(uid) && resource.data.uid == request.auth.uid;
+        allow create: if isValidId(uid) && isValidId(modeId)
+          && isOwner(uid)
+          && isValidCustomMode(incoming(), uid, modeId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isValidId(uid) && isValidId(modeId)
+          && isOwner(uid)
+          && isValidCustomMode(incoming(), uid, modeId)
+          && incoming().id == existing().id
+          && incoming().uid == existing().uid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'instructions', 'tone', 'language', 'updatedAt']);
+        allow delete: if isValidId(uid) && isValidId(modeId) && isOwner(uid);
+      }
+
+      // Custom Vocabulary Subcollection
+      match /vocabulary/{vocabId} {
+        allow get: if isValidId(uid) && isValidId(vocabId) && isOwner(uid);
+        allow list: if isValidId(uid) && isOwner(uid) && resource.data.uid == request.auth.uid;
+        allow create: if isValidId(uid) && isValidId(vocabId)
+          && isOwner(uid)
+          && isValidVocabularyItem(incoming(), uid, vocabId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isValidId(uid) && isValidId(vocabId)
+          && isOwner(uid)
+          && isValidVocabularyItem(incoming(), uid, vocabId)
+          && incoming().id == existing().id
+          && incoming().uid == existing().uid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly(['term', 'spokenAlias', 'category', 'notes', 'updatedAt']);
+        allow delete: if isValidId(uid) && isValidId(vocabId) && isOwner(uid);
+      }
+
+      // Usage Activity Subcollection
+      match /activity/{activityId} {
+        allow get: if isValidId(uid) && isValidId(activityId) && isOwner(uid);
+        allow list: if isValidId(uid) && isOwner(uid) && resource.data.uid == request.auth.uid;
+        allow create: if isValidId(uid) && isValidId(activityId)
+          && isOwner(uid)
+          && isValidActivityEvent(incoming(), uid, activityId)
+          && incoming().createdAt == request.time;
+        allow update: if false;
+        allow delete: if isValidId(uid) && isValidId(activityId) && isOwner(uid);
+      }
+    }
+  }
+}

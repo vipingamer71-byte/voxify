@@ -1,0 +1,6 @@
+{
+  "name": "VOXIFY",
+  "description": "Don't Type It. Just Voxify It. AI-powered voice productivity workspace with live dictation, AI assistant, AI rewrite, and developer voice-to-code tools.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
